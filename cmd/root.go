@@ -6,6 +6,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -32,43 +33,57 @@ var rootCmd = &cobra.Command{
      a separate line after the output for the last file.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Args: cobra.MinimumNArgs(1),
+	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		inputFile := args[0]
+		var input []byte
+		var err error
+		var fileProvided bool
+
+		if len(args) == 0 {
+			input, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				fmt.Printf("could not read from stdin: %v\n", err)
+				os.Exit(1)
+			}
+		} else if len(args) == 1 {
+			input, err = os.ReadFile(args[0])
+			if err != nil {
+				fmt.Printf("couldn't open file as bytes: %v\n", err)
+				os.Exit(1)
+			}
+			fileProvided = true
+		} else {
+			fmt.Println("no stdin or input file provided")
+		}
 
 		if !bytesCount && !lines && !words && !chars {
 			bytesCount, lines, words = true, true, true
 		}
 
-		byteList, err := os.ReadFile(inputFile)
-		if err != nil {
-			fmt.Printf("couldn't open file as bytes: %v", err)
-			os.Exit(1)
-		}
-
-		if bytesCount {
-			fmt.Printf("%d ", len(byteList))
-		}
-
 		if lines {
-			lineCount := getLineCount(byteList)
-			fmt.Printf("%d ", lineCount)
-
+			lineCount := getLineCount(input)
+			fmt.Printf("%8d", lineCount)
 		}
 
 		if words {
-			wordList := strings.Fields(string(byteList))
-			fmt.Printf("%d ", len(wordList))
+			wordList := strings.Fields(string(input))
+			fmt.Printf("%8d ", len(wordList))
+		}
 
+		if bytesCount {
+			fmt.Printf("%8d ", len(input))
 		}
 
 		if chars {
-			runeList := []rune(string(byteList))
-			fmt.Printf("%d ", len(runeList))
+			runeList := []rune(string(input))
+			fmt.Printf("%8d ", len(runeList))
 		}
 
-		fmt.Printf("%s\n", inputFile)
-
+		if fileProvided {
+			fmt.Printf("%s\n", args[0])
+		} else {
+			fmt.Println()
+		}
 	},
 }
 
