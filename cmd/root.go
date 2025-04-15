@@ -67,20 +67,20 @@ var rootCmd = &cobra.Command{
 
 		if words {
 			wordList := strings.Fields(string(input))
-			fmt.Printf("%8d ", len(wordList))
+			fmt.Printf("%8d", len(wordList))
 		}
 
 		if bytesCount {
-			fmt.Printf("%8d ", len(input))
+			fmt.Printf("%8d", len(input))
 		}
 
 		if chars {
 			runeList := []rune(string(input))
-			fmt.Printf("%8d ", len(runeList))
+			fmt.Printf("%8d", len(runeList))
 		}
 
 		if fileProvided {
-			fmt.Printf("%s\n", args[0])
+			fmt.Printf(" %s\n", args[0])
 		} else {
 			fmt.Println()
 		}
