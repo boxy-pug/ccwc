@@ -1,12 +1,36 @@
 package main
 
 import (
-	"log"
-	"os"
-	"os/exec"
+	"bytes"
+	"strings"
 	"testing"
 )
 
+func TestWc(t *testing.T) {
+	var buf bytes.Buffer
+
+	t.Run("normal wordcount cmd", func(t *testing.T) {
+		cmd := Command{
+			Input: strings.NewReader(`Hello testing
+yes yes cool
+ok goodbye now`),
+
+			Output: &buf,
+			Flag:   WcFlag{},
+		}
+
+		cmd.Run()
+
+		got := buf.String()
+		want := "       3       8      42"
+
+		if got != want {
+			t.Errorf("got: %q want: %q\n", got, want)
+		}
+	})
+}
+
+/*
 var testFiles = getTestFiles("./testdata/")
 
 func getTestFiles(testFolder string) []string {
@@ -91,3 +115,4 @@ func TestWcWithBytesFlag(t *testing.T) {
 		}
 	}
 }
+*/

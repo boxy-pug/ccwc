@@ -9,8 +9,97 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"unicode"
+	"strings"
+	"unicode/utf8"
 )
+
+type Command struct {
+	Input  io.Reader
+	Output io.Writer
+	Flag   WcFlag
+	Count  Count
+}
+
+type WcFlag struct {
+	Bytes bool
+	Lines bool
+	Words bool
+	Chars bool
+}
+
+type Count struct {
+	linesTotal int
+	wordsTotal int
+	charsTotal int
+	bytesTotal int
+}
+
+func main() {
+	cmd, _ := loadCommand()
+
+	cmd.Run()
+}
+
+func loadCommand() (Command, error) {
+	// var err error
+	cmd := Command{
+		Input:  os.Stdin,
+		Output: os.Stdout,
+	}
+
+	flag.BoolVar(&cmd.Flag.Bytes, "c", false, "count bytes")
+	flag.BoolVar(&cmd.Flag.Lines, "l", false, "count lines")
+	flag.BoolVar(&cmd.Flag.Words, "w", false, "count words")
+	flag.BoolVar(&cmd.Flag.Chars, "m", false, "count chars")
+
+	flag.Parse()
+	// args := flag.Args()
+
+	if !cmd.Flag.Bytes && !cmd.Flag.Lines && !cmd.Flag.Words && !cmd.Flag.Chars {
+		cmd.Flag.Lines, cmd.Flag.Words, cmd.Flag.Bytes = true, true, true
+	}
+
+	return cmd, nil
+}
+
+func (cmd *Command) Run() {
+	reader := bufio.NewReader(cmd.Input)
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		cmd.Count.linesTotal++
+
+		cmd.Count.wordsTotal += len(strings.Fields(line))
+
+		cmd.Count.bytesTotal += len(line)
+
+		cmd.Count.charsTotal += utf8.RuneCountInString(line)
+
+	}
+
+	printResult(cmd.Count, cmd.Flag, cmd.Output)
+}
+
+func printResult(count Count, flag WcFlag, w io.Writer) {
+	if flag.Lines {
+		fmt.Fprintf(w, "%8d", count.linesTotal)
+	}
+	if flag.Words {
+		fmt.Fprintf(w, "%8d", count.wordsTotal)
+	}
+	if flag.Bytes {
+		fmt.Fprintf(w, "%8d", count.bytesTotal)
+	}
+	if flag.Chars {
+		fmt.Fprintf(w, "%8d", count.charsTotal)
+	}
+	fmt.Fprintln(w)
+}
+
+/*
 
 type wcCommand struct {
 	wcObjects        []wcObj
@@ -20,10 +109,6 @@ type wcCommand struct {
 	chars            bool
 	multipleFiles    bool
 	fileNameProvided bool
-	linesTotal       int
-	wordsTotal       int
-	charsTotal       int
-	bytesTotal       int
 }
 
 type wcObj struct {
@@ -124,7 +209,6 @@ func (wc *wcCommand) printTotalLine() {
 		fmt.Printf("%8d", wc.charsTotal)
 	}
 	fmt.Println(" total")
-
 }
 
 func (wc *wcCommand) openFile() {
@@ -150,3 +234,5 @@ func (wc *wcCommand) openFile() {
 		wc.multipleFiles = true
 	}
 }
+
+*/
