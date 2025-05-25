@@ -18,7 +18,7 @@ yes yes cool
 ok goodbye now
 `),
 			Output: &buf,
-			Flag: WcFlag{
+			Config: WcConfig{
 				Words: true,
 				Lines: true,
 				Bytes: true,
@@ -41,7 +41,7 @@ yes yes cool
 ok goodbye 🌟now
 `),
 			Output: &buf,
-			Flag: WcFlag{
+			Config: WcConfig{
 				Chars:            true,
 				FileNameProvided: true,
 				FileName:         "faketest.txt",

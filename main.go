@@ -14,13 +14,13 @@ import (
 )
 
 type Command struct {
-	Input  io.Reader
-	Output io.Writer
-	Flag   WcFlag
-	Count  Count
+	Input   io.Reader
+	Output  io.Writer
+	Config  WcConfig
+	Counter WordCounter
 }
 
-type WcFlag struct {
+type WcConfig struct {
 	Bytes            bool
 	Lines            bool
 	Words            bool
@@ -29,7 +29,7 @@ type WcFlag struct {
 	FileName         string
 }
 
-type Count struct {
+type WordCounter struct {
 	linesTotal int
 	wordsTotal int
 	charsTotal int
@@ -51,19 +51,19 @@ func loadCommand() (Command, error) {
 		Output: os.Stdout,
 	}
 
-	flag.BoolVar(&cmd.Flag.Bytes, "c", false, "count bytes")
-	flag.BoolVar(&cmd.Flag.Lines, "l", false, "count lines")
-	flag.BoolVar(&cmd.Flag.Words, "w", false, "count words")
-	flag.BoolVar(&cmd.Flag.Chars, "m", false, "count chars")
+	flag.BoolVar(&cmd.Config.Bytes, "c", false, "count bytes")
+	flag.BoolVar(&cmd.Config.Lines, "l", false, "count lines")
+	flag.BoolVar(&cmd.Config.Words, "w", false, "count words")
+	flag.BoolVar(&cmd.Config.Chars, "m", false, "count chars")
 
 	flag.Parse()
 	args := flag.Args()
 
-	setDefaultFlags(&cmd.Flag)
+	setDefaultFlags(&cmd.Config)
 
 	switch {
 	case len(args) == 0:
-		cmd.Flag.FileNameProvided = false
+		cmd.Config.FileNameProvided = false
 		cmd.Input = os.Stdin
 	case len(args) == 1:
 		file, err := os.Open(args[0])
@@ -73,8 +73,8 @@ func loadCommand() (Command, error) {
 		}
 		// defer file.Close()
 		cmd.Input = file
-		cmd.Flag.FileNameProvided = true
-		cmd.Flag.FileName = file.Name()
+		cmd.Config.FileNameProvided = true
+		cmd.Config.FileName = file.Name()
 	}
 	return cmd, nil
 }
@@ -87,23 +87,23 @@ func (cmd *Command) Run() {
 		if err != nil {
 			break
 		}
-		if cmd.Flag.Lines {
-			cmd.Count.linesTotal++
+		if cmd.Config.Lines {
+			cmd.Counter.linesTotal++
 		}
-		if cmd.Flag.Words {
-			cmd.Count.wordsTotal += len(strings.Fields(line))
+		if cmd.Config.Words {
+			cmd.Counter.wordsTotal += len(strings.Fields(line))
 		}
-		if cmd.Flag.Bytes {
-			cmd.Count.bytesTotal += len(line)
+		if cmd.Config.Bytes {
+			cmd.Counter.bytesTotal += len(line)
 		}
-		if cmd.Flag.Chars {
-			cmd.Count.charsTotal += utf8.RuneCountInString(line)
+		if cmd.Config.Chars {
+			cmd.Counter.charsTotal += utf8.RuneCountInString(line)
 		}
 	}
-	printResult(cmd.Count, cmd.Flag, cmd.Output)
+	printResult(cmd.Counter, cmd.Config, cmd.Output)
 }
 
-func printResult(count Count, flag WcFlag, w io.Writer) {
+func printResult(count WordCounter, flag WcConfig, w io.Writer) {
 	if flag.Lines {
 		fmt.Fprintf(w, "%8d", count.linesTotal)
 	}
@@ -125,7 +125,7 @@ func printResult(count Count, flag WcFlag, w io.Writer) {
 // TODO: multiple file input support
 
 // If no flags provided enable standard wc options lines, words and bytes
-func setDefaultFlags(flag *WcFlag) {
+func setDefaultFlags(flag *WcConfig) {
 	if !flag.Bytes && !flag.Lines && !flag.Words && !flag.Chars {
 		flag.Lines, flag.Words, flag.Bytes = true, true, true
 	}
