@@ -30,9 +30,7 @@ ok goodbye now
 		got := buf.String()
 		want := "       3       8      42"
 
-		if got != want {
-			t.Errorf("got: %q want: %q\n", got, want)
-		}
+		assertEqual(t, string(got), string(want))
 	})
 
 	t.Run("charcount from file with emojis, with filename", func(t *testing.T) {
@@ -55,9 +53,7 @@ ok goodbye 🌟now
 		got := buf.String()
 		want := "      44 faketest.txt"
 
-		if got != want {
-			t.Errorf("got: %q want: %q\n", got, want)
-		}
+		assertEqual(t, string(got), string(want))
 	})
 }
 
@@ -92,12 +88,7 @@ func TestWcWithoutFlag(t *testing.T) {
 			t.Fatalf("Command %s failed with error: %v", unixCmd.String(), err)
 		}
 
-		gotString := string(got)
-		wantString := string(want)
-
-		if gotString != wantString {
-			t.Errorf("EXPECTED: \n%q\nGOT: \n%q\n", wantString, gotString)
-		}
+		assertEqual(t, string(got), string(want))
 	}
 }
 
@@ -115,12 +106,7 @@ func TestWcWithLinesFlag(t *testing.T) {
 			t.Fatalf("Command %s failed with error: %v", unixCmd.String(), err)
 		}
 
-		gotString := string(got)
-		wantString := string(want)
-
-		if gotString != wantString {
-			t.Errorf("EXPECTED: \n%q\nGOT: \n%q\n", wantString, gotString)
-		}
+		assertEqual(t, string(got), string(want))
 	}
 }
 
@@ -138,11 +124,13 @@ func TestWcWithBytesFlag(t *testing.T) {
 			t.Fatalf("Command %s failed with error: %v", unixCmd.String(), err)
 		}
 
-		gotString := string(got)
-		wantString := string(want)
+		assertEqual(t, string(got), string(want))
+	}
+}
 
-		if gotString != wantString {
-			t.Errorf("EXPECTED: \n%q\nGOT: \n%q\n", wantString, gotString)
-		}
+func assertEqual(t testing.TB, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
