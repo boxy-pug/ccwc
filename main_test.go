@@ -13,16 +13,18 @@ func TestWcUnit(t *testing.T) {
 	t.Run("normal wordcount cmd", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			Input: strings.NewReader(`Hello testing
+			FileConfig: []WcConfig{
+				{
+					Input: strings.NewReader(`Hello testing
 yes yes cool
 ok goodbye now
 `),
-			Output: &buf,
-			Config: WcConfig{
-				Words: true,
-				Lines: true,
-				Bytes: true,
+				},
 			},
+			Output:    &buf,
+			WordsFlag: true,
+			LinesFlag: true,
+			BytesFlag: true,
 		}
 
 		cmd.Run()
@@ -36,16 +38,19 @@ ok goodbye now
 	t.Run("charcount from file with emojis, with filename", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			Input: strings.NewReader(`Hello testing😊
+			FileConfig: []WcConfig{
+				{
+					Input: strings.NewReader(`Hello testing😊
 yes yes cool
 ok goodbye 🌟now
 `),
-			Output: &buf,
-			Config: WcConfig{
-				Chars:            true,
-				FileNameProvided: true,
-				FileName:         "faketest.txt",
+					FileName: "faketest.txt",
+				},
 			},
+
+			Output:           &buf,
+			CharsFlag:        true,
+			FileNameProvided: true,
 		}
 
 		cmd.Run()
@@ -131,6 +136,22 @@ func TestWcWithBytesFlag(t *testing.T) {
 func assertEqual(t testing.TB, got, want string) {
 	t.Helper()
 	if got != want {
-		t.Errorf("got %q, want %q", got, want)
+		t.Errorf("got  %q/nwant %q/n", got, want)
 	}
+}
+
+func TestWcWithoutFlagMultipleFiles(t *testing.T) {
+	cmd := exec.Command("./ccwc", testFiles...)
+	got, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Command %s failed with error: %v", cmd.String(), err)
+	}
+
+	unixCmd := exec.Command("wc", testFiles...)
+	want, err := unixCmd.Output()
+	if err != nil {
+		t.Fatalf("Command %s failed with error: %v", unixCmd.String(), err)
+	}
+
+	assertEqual(t, string(got), string(want))
 }
