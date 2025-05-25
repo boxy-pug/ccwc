@@ -21,10 +21,12 @@ type Command struct {
 }
 
 type WcFlag struct {
-	Bytes bool
-	Lines bool
-	Words bool
-	Chars bool
+	Bytes            bool
+	Lines            bool
+	Words            bool
+	Chars            bool
+	FileNameProvided bool
+	FileName         string
 }
 
 type Count struct {
@@ -43,7 +45,6 @@ func main() {
 func loadCommand() (Command, error) {
 	// var err error
 	cmd := Command{
-		Input:  os.Stdin,
 		Output: os.Stdout,
 	}
 
@@ -53,12 +54,27 @@ func loadCommand() (Command, error) {
 	flag.BoolVar(&cmd.Flag.Chars, "m", false, "count chars")
 
 	flag.Parse()
-	// args := flag.Args()
+	args := flag.Args()
 
+	// If no flags provided enable standard wc options lines, words and bytes
 	if !cmd.Flag.Bytes && !cmd.Flag.Lines && !cmd.Flag.Words && !cmd.Flag.Chars {
 		cmd.Flag.Lines, cmd.Flag.Words, cmd.Flag.Bytes = true, true, true
 	}
 
+	switch {
+	case len(args) == 0:
+		cmd.Flag.FileNameProvided = false
+		cmd.Input = os.Stdin
+	case len(args) == 1:
+		filePath, err := os.Open(args[0])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		cmd.Input = filePath
+		cmd.Flag.FileNameProvided = true
+		cmd.Flag.FileName = filePath.Name()
+	}
 	return cmd, nil
 }
 
@@ -77,9 +93,7 @@ func (cmd *Command) Run() {
 		cmd.Count.bytesTotal += len(line)
 
 		cmd.Count.charsTotal += utf8.RuneCountInString(line)
-
 	}
-
 	printResult(cmd.Count, cmd.Flag, cmd.Output)
 }
 
@@ -96,7 +110,10 @@ func printResult(count Count, flag WcFlag, w io.Writer) {
 	if flag.Chars {
 		fmt.Fprintf(w, "%8d", count.charsTotal)
 	}
-	fmt.Fprintln(w)
+	if flag.FileNameProvided {
+		fmt.Fprintf(w, " %s", flag.FileName)
+	}
+	// fmt.Fprintln(w)
 }
 
 /*

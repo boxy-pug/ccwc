@@ -2,21 +2,27 @@ package main
 
 import (
 	"bytes"
+	"log"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 )
 
-func TestWc(t *testing.T) {
-	var buf bytes.Buffer
-
+func TestWcUnit(t *testing.T) {
 	t.Run("normal wordcount cmd", func(t *testing.T) {
+		var buf bytes.Buffer
 		cmd := Command{
 			Input: strings.NewReader(`Hello testing
 yes yes cool
-ok goodbye now`),
-
+ok goodbye now
+`),
 			Output: &buf,
-			Flag:   WcFlag{},
+			Flag: WcFlag{
+				Words: true,
+				Lines: true,
+				Bytes: true,
+			},
 		}
 
 		cmd.Run()
@@ -28,9 +34,34 @@ ok goodbye now`),
 			t.Errorf("got: %q want: %q\n", got, want)
 		}
 	})
+
+	t.Run("charcount from file with emojis, with filename", func(t *testing.T) {
+		var buf bytes.Buffer
+		cmd := Command{
+			Input: strings.NewReader(`Hello testing😊
+yes yes cool
+ok goodbye 🌟now
+`),
+			Output: &buf,
+			Flag: WcFlag{
+				Chars:            true,
+				FileNameProvided: true,
+				FileName:         "faketest.txt",
+			},
+		}
+
+		cmd.Run()
+
+		got := buf.String()
+		want := "      44 faketest.txt"
+
+		if got != want {
+			t.Errorf("got: %q want: %q\n", got, want)
+		}
+	})
 }
 
-/*
+// Old integration tests
 var testFiles = getTestFiles("./testdata/")
 
 func getTestFiles(testFolder string) []string {
@@ -115,4 +146,3 @@ func TestWcWithBytesFlag(t *testing.T) {
 		}
 	}
 }
-*/
