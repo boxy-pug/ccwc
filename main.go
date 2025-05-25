@@ -40,6 +40,7 @@ func main() {
 	cmd, err := loadCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error loading command:", err)
+		os.Exit(1)
 	}
 
 	cmd.Run()
@@ -52,7 +53,7 @@ func loadCommand() (Command, error) {
 	}
 
 	flag.BoolVar(&cmd.Config.Bytes, "c", false, "count bytes")
-	flag.BoolVar(&cmd.Config.Lines, "l", false, "count lines")
+	flag.BoolVar(&cmd.Config.Lines, "l", false, "count lin1ss")
 	flag.BoolVar(&cmd.Config.Words, "w", false, "count words")
 	flag.BoolVar(&cmd.Config.Chars, "m", false, "count chars")
 
@@ -68,13 +69,14 @@ func loadCommand() (Command, error) {
 	case len(args) == 1:
 		file, err := os.Open(args[0])
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return cmd, fmt.Errorf("couldn't open file %v, error: %v", args[0], err)
 		}
 		// defer file.Close()
 		cmd.Input = file
 		cmd.Config.FileNameProvided = true
 		cmd.Config.FileName = file.Name()
+	default:
+		return cmd, fmt.Errorf("wrong amount of args")
 	}
 	return cmd, nil
 }
