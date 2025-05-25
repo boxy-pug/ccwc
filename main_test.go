@@ -28,7 +28,7 @@ ok goodbye now
 		cmd.Run()
 
 		got := buf.String()
-		want := "       3       8      42"
+		want := "       3       8      42\n"
 
 		assertEqual(t, string(got), string(want))
 	})
@@ -51,7 +51,7 @@ ok goodbye 🌟now
 		cmd.Run()
 
 		got := buf.String()
-		want := "      44 faketest.txt"
+		want := "      44 faketest.txt\n"
 
 		assertEqual(t, string(got), string(want))
 	})

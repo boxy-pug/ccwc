@@ -37,7 +37,10 @@ type Count struct {
 }
 
 func main() {
-	cmd, _ := loadCommand()
+	cmd, err := loadCommand()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error loading command:", err)
+	}
 
 	cmd.Run()
 }
@@ -56,24 +59,22 @@ func loadCommand() (Command, error) {
 	flag.Parse()
 	args := flag.Args()
 
-	// If no flags provided enable standard wc options lines, words and bytes
-	if !cmd.Flag.Bytes && !cmd.Flag.Lines && !cmd.Flag.Words && !cmd.Flag.Chars {
-		cmd.Flag.Lines, cmd.Flag.Words, cmd.Flag.Bytes = true, true, true
-	}
+	setDefaultFlags(&cmd.Flag)
 
 	switch {
 	case len(args) == 0:
 		cmd.Flag.FileNameProvided = false
 		cmd.Input = os.Stdin
 	case len(args) == 1:
-		filePath, err := os.Open(args[0])
+		file, err := os.Open(args[0])
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		cmd.Input = filePath
+		// defer file.Close()
+		cmd.Input = file
 		cmd.Flag.FileNameProvided = true
-		cmd.Flag.FileName = filePath.Name()
+		cmd.Flag.FileName = file.Name()
 	}
 	return cmd, nil
 }
@@ -118,7 +119,14 @@ func printResult(count Count, flag WcFlag, w io.Writer) {
 	if flag.FileNameProvided {
 		fmt.Fprintf(w, " %s", flag.FileName)
 	}
-	// fmt.Fprintln(w)
+	fmt.Fprintln(w)
 }
 
 // TODO: multiple file input support
+
+// If no flags provided enable standard wc options lines, words and bytes
+func setDefaultFlags(flag *WcFlag) {
+	if !flag.Bytes && !flag.Lines && !flag.Words && !flag.Chars {
+		flag.Lines, flag.Words, flag.Bytes = true, true, true
+	}
+}
