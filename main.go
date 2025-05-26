@@ -39,30 +39,40 @@ type WordCounter struct {
 }
 
 func main() {
-	cmd, err := loadCommand()
+	cmd, cleanup, err := loadCommand()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error loading command:", err)
 		os.Exit(1)
 	}
+	defer cleanup()
 
 	cmd.Run()
+	if err != nil {
+		fmt.Fprintln(cmd.Output, "error running wc command:", err)
+		os.Exit(1)
+	}
 }
 
-func loadCommand() (Command, error) {
+func loadCommand() (Command, func(), error) {
 	// var err error
 	cmd := Command{
 		Output: os.Stdout,
 	}
 
 	flag.BoolVar(&cmd.BytesFlag, "c", false, "count bytes")
-	flag.BoolVar(&cmd.LinesFlag, "l", false, "count lin1ss")
+	flag.BoolVar(&cmd.LinesFlag, "l", false, "count lines")
 	flag.BoolVar(&cmd.WordsFlag, "w", false, "count words")
 	flag.BoolVar(&cmd.CharsFlag, "m", false, "count chars")
 
 	flag.Parse()
 	args := flag.Args()
 
-	setDefaultFlags(&cmd)
+	// If no flags provided, enable standard wc options: lines, words and bytes
+	if !cmd.BytesFlag && !cmd.LinesFlag && !cmd.WordsFlag && !cmd.CharsFlag {
+		cmd.LinesFlag, cmd.WordsFlag, cmd.BytesFlag = true, true, true
+	}
+
+	var cleanup func() = func() {}
 
 	switch {
 	case len(args) == 0:
@@ -71,22 +81,31 @@ func loadCommand() (Command, error) {
 			Input: os.Stdin,
 		})
 	case len(args) > 0:
+		var files []*os.File
 		for _, a := range args {
 			file, err := os.Open(a)
 			if err != nil {
-				return cmd, fmt.Errorf("couldn't open file %v, error: %v", a, err)
+				return cmd, cleanup, fmt.Errorf("couldn't open file %v, error: %v", a, err)
 			}
+			files = append(files, file)
 			cmd.FileConfig = append(cmd.FileConfig, WcConfig{
 				FileName: file.Name(),
 				Input:    file,
 			})
 		}
-		// defer file.Close()
 		cmd.FileNameProvided = true
+
+		cleanup = func() {
+			for _, f := range files {
+				f.Close()
+			}
+		}
+
 	default:
-		return cmd, fmt.Errorf("wrong amount of args")
+		flag.Usage()
+		return cmd, cleanup, fmt.Errorf("wrong amount of args")
 	}
-	return cmd, nil
+	return cmd, cleanup, nil
 }
 
 func (cmd *Command) Run() {
@@ -139,15 +158,6 @@ func printResult(counter WordCounter, cmd Command, fileName string) {
 		fmt.Fprintf(cmd.Output, " %s", fileName)
 	}
 	fmt.Fprintln(cmd.Output)
-}
-
-// TODO: multiple file input support
-
-// If no flags provided enable standard wc options lines, words and bytes
-func setDefaultFlags(cmd *Command) {
-	if !cmd.BytesFlag && !cmd.LinesFlag && !cmd.WordsFlag && !cmd.CharsFlag {
-		cmd.LinesFlag, cmd.WordsFlag, cmd.BytesFlag = true, true, true
-	}
 }
 
 func (cmd *Command) addCountToTotal(input WordCounter) {
