@@ -115,22 +115,25 @@ func (cmd *Command) Run() error {
 
 		for {
 			line, err := reader.ReadString('\n')
-			if len(line) > 0 {
 
-				if cmd.LinesFlag {
-					input.Counter.Lines++
-				}
-				if cmd.WordsFlag {
-					input.Counter.Words += len(strings.Fields(line))
-				}
-				if cmd.BytesFlag {
-					input.Counter.Bytes += len(line)
-				}
-				if cmd.CharsFlag {
-					input.Counter.Chars += utf8.RuneCountInString(line)
-				}
-
+			// Break if we're at EOF and nothing left to process
+			if line == "" && err == io.EOF {
+				break
 			}
+
+			if cmd.LinesFlag {
+				input.Counter.Lines++
+			}
+			if cmd.WordsFlag {
+				input.Counter.Words += len(strings.Fields(line))
+			}
+			if cmd.BytesFlag {
+				input.Counter.Bytes += len(line)
+			}
+			if cmd.CharsFlag {
+				input.Counter.Chars += utf8.RuneCountInString(line)
+			}
+
 			if err == io.EOF {
 				break
 			}
