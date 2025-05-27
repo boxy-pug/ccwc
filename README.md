@@ -1,20 +1,20 @@
-# ccwc
+# 📝 ccwc
 
 A Go implementation of the classic Unix `wc` (word count) tool, created for the [codingchallenges.fyi wc challenge](https://codingchallenges.fyi/challenges/challenge-wc/).
 
 ---
 
-## Features
+## 🚀 Features
 
 -  Counts **lines**, **words**, **bytes**, and **characters** (Unicode-aware)
 -  Supports **multiple files** and **stdin**
 -  Output style matches GNU `wc`
 -  Unit and integration tests included
--  Clean, idiomatic Go code with helpful comments
+-  Clean, idiomatic Go code with comments
 
 ---
 
-## Usage
+## 🛠️ Usage
 
 ```sh
 # Count lines, words, and bytes (default) in one or more files
@@ -41,7 +41,7 @@ cat file.txt | ccwc
 
 ---
 
-## Flags
+## 🚩 Flags
 
 | Flag | Description                    |
 |------|--------------------------------|
@@ -54,7 +54,7 @@ cat file.txt | ccwc
 
 ---
 
-## Example
+## 💻 Example
 
 ```sh
 $ ccwc -l -w -c test.txt
@@ -63,7 +63,7 @@ $ ccwc -l -w -c test.txt
 
 ---
 
-## Installation
+## 🧑‍💻 Installation
 
 ```sh
 go install github.com/boxy-pug/ccwc@latest
@@ -76,24 +76,6 @@ git clone https://github.com/boxy-pug/ccwc.git
 cd ccwc
 go build -o ccwc
 ```
-
----
-
-## Development
-
--  Unit and integration tests included.
--  Code is commented and follows Go idioms.
--  To run tests:
-
-  ```sh
-  go test
-  ```
-
--  To tidy dependencies:
-
-  ```sh
-  go mod tidy
-  ```
 
 ---
 
