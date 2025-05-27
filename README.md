@@ -79,10 +79,3 @@ go build -o ccwc
 
 ---
 
-## License
-
-MIT (see [LICENSE](LICENSE))
-
----
-
-
