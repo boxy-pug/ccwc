@@ -16,7 +16,7 @@ import (
 type Command struct {
 	// Input            []io.Reader
 	Output           io.Writer
-	FileConfig       []WcConfig
+	Files            []FileInput
 	TotalCounter     WordCounter
 	BytesFlag        bool
 	LinesFlag        bool
@@ -25,7 +25,7 @@ type Command struct {
 	FileNameProvided bool
 }
 
-type WcConfig struct {
+type FileInput struct {
 	FileName string
 	Counter  WordCounter
 	Input    io.Reader
@@ -46,7 +46,7 @@ func main() {
 	}
 	defer cleanup()
 
-	cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		fmt.Fprintln(cmd.Output, "error running wc command:", err)
 		os.Exit(1)
@@ -77,7 +77,7 @@ func loadCommand() (Command, func(), error) {
 	switch {
 	case len(args) == 0:
 		cmd.FileNameProvided = false
-		cmd.FileConfig = append(cmd.FileConfig, WcConfig{
+		cmd.Files = append(cmd.Files, FileInput{
 			Input: os.Stdin,
 		})
 	case len(args) > 0:
@@ -88,7 +88,7 @@ func loadCommand() (Command, func(), error) {
 				return cmd, cleanup, fmt.Errorf("couldn't open file %v, error: %v", a, err)
 			}
 			files = append(files, file)
-			cmd.FileConfig = append(cmd.FileConfig, WcConfig{
+			cmd.Files = append(cmd.Files, FileInput{
 				FileName: file.Name(),
 				Input:    file,
 			})
@@ -108,37 +108,45 @@ func loadCommand() (Command, func(), error) {
 	return cmd, cleanup, nil
 }
 
-func (cmd *Command) Run() {
-	for _, input := range cmd.FileConfig {
+func (cmd *Command) Run() error {
+	for _, input := range cmd.Files {
 		reader := bufio.NewReader(input.Input)
 
 		for {
 			line, err := reader.ReadString('\n')
-			if err != nil {
+			if len(line) > 0 {
+
+				if cmd.LinesFlag {
+					input.Counter.Lines++
+				}
+				if cmd.WordsFlag {
+					input.Counter.Words += len(strings.Fields(line))
+				}
+				if cmd.BytesFlag {
+					input.Counter.Bytes += len(line)
+				}
+				if cmd.CharsFlag {
+					input.Counter.Chars += utf8.RuneCountInString(line)
+				}
+
+			}
+			if err == io.EOF {
 				break
 			}
-			if cmd.LinesFlag {
-				input.Counter.Lines++
-			}
-			if cmd.WordsFlag {
-				input.Counter.Words += len(strings.Fields(line))
-			}
-			if cmd.BytesFlag {
-				input.Counter.Bytes += len(line)
-			}
-			if cmd.CharsFlag {
-				input.Counter.Chars += utf8.RuneCountInString(line)
+			if err != nil {
+				return err
 			}
 		}
 		printResult(input.Counter, *cmd, input.FileName)
 
-		if len(cmd.FileConfig) > 1 {
+		if len(cmd.Files) > 1 {
 			cmd.addCountToTotal(input.Counter)
 		}
 	}
-	if len(cmd.FileConfig) > 1 {
+	if len(cmd.Files) > 1 {
 		printResult(cmd.TotalCounter, *cmd, "total")
 	}
+	return nil
 }
 
 func printResult(counter WordCounter, cmd Command, fileName string) {

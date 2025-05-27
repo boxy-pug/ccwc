@@ -13,7 +13,7 @@ func TestWcUnit(t *testing.T) {
 	t.Run("normal wordcount cmd", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			FileConfig: []WcConfig{
+			Files: []FileInput{
 				{
 					Input: strings.NewReader(`Hello testing
 yes yes cool
@@ -38,7 +38,7 @@ ok goodbye now
 	t.Run("charcount from file with emojis, with filename", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			FileConfig: []WcConfig{
+			Files: []FileInput{
 				{
 					Input: strings.NewReader(`Hello testing😊
 yes yes cool
@@ -61,10 +61,59 @@ ok goodbye 🌟now
 		assertEqual(t, string(got), string(want))
 	})
 
+	t.Run("charcount from file with emojis, no trailing newline", func(t *testing.T) {
+		var buf bytes.Buffer
+		cmd := Command{
+			Files: []FileInput{
+				{
+					Input:    strings.NewReader("Hello testing😊\nyes yes cool\nok goodbye 🌟now"), // no final '\n'
+					FileName: "faketest.txt",
+				},
+			},
+			Output:           &buf,
+			CharsFlag:        true,
+			FileNameProvided: true,
+		}
+
+		cmd.Run()
+
+		got := buf.String()
+		want := "      43 faketest.txt\n" // This is the expected count if the last line is counted
+
+		assertEqual(t, got, want)
+	})
+
+	t.Run("wc counts with multiple empty lines and a regular line", func(t *testing.T) {
+		var buf bytes.Buffer
+		cmd := Command{
+			Files: []FileInput{
+				{
+					Input:    strings.NewReader("\n\n\nHello world\n"),
+					FileName: "faketest.txt",
+				},
+			},
+			Output:           &buf,
+			LinesFlag:        true,
+			WordsFlag:        true,
+			BytesFlag:        true,
+			FileNameProvided: true,
+		}
+
+		cmd.Run()
+
+		got := buf.String()
+		// 3 empty lines + "Hello world\n" = 4 lines
+		// Only "Hello world" has words (2)
+		// 3 empty lines = 3 bytes, "Hello world\n" = 12 bytes, total = 15 bytes
+		want := "       4       2      15 faketest.txt\n"
+
+		assertEqual(t, got, want)
+	})
+
 	t.Run("empty file", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			FileConfig: []WcConfig{
+			Files: []FileInput{
 				{
 					Input: strings.NewReader(""),
 				},
@@ -86,7 +135,7 @@ ok goodbye 🌟now
 	t.Run("multiple files", func(t *testing.T) {
 		var buf bytes.Buffer
 		cmd := Command{
-			FileConfig: []WcConfig{
+			Files: []FileInput{
 				{
 					Input: strings.NewReader(`Hello testing
 yes yes cool
