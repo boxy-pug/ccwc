@@ -55,6 +55,8 @@ ok goodbye 🌟now
 
 		cmd.Run()
 
+		// This counts Unicode code points (runes), not bytes or grapheme clusters.
+		// 1 emoji = 1 rune = 1 char
 		got := buf.String()
 		want := "      44 faketest.txt\n"
 
@@ -170,7 +172,7 @@ ok goodbye now
 }
 
 // Old integration tests
-func TestWcIntegrationTest(t *testing.T) {
+func TestWcIntegration(t *testing.T) {
 	testFiles := getTestFiles("./testdata/")
 
 	t.Run("Test Wc without flags", func(t *testing.T) {

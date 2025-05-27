@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 boxy-pug
-*/
 package main
 
 import (
@@ -13,8 +10,8 @@ import (
 	"unicode/utf8"
 )
 
+// Command holds config and state for the wc command
 type Command struct {
-	// Input            []io.Reader
 	Output           io.Writer
 	Files            []FileInput
 	TotalCounter     WordCounter
@@ -25,12 +22,14 @@ type Command struct {
 	FileNameProvided bool
 }
 
+// FileInput represents single file or input stream
 type FileInput struct {
 	FileName string
 	Counter  WordCounter
 	Input    io.Reader
 }
 
+// WordCounter tracks the count
 type WordCounter struct {
 	Lines int
 	Words int
@@ -53,8 +52,8 @@ func main() {
 	}
 }
 
+// loadCommand parses cmdline flags and input files, returns configured command
 func loadCommand() (Command, func(), error) {
-	// var err error
 	cmd := Command{
 		Output: os.Stdout,
 	}
@@ -75,6 +74,7 @@ func loadCommand() (Command, func(), error) {
 	var cleanup func() = func() {}
 
 	switch {
+	// no files provided: use stdin
 	case len(args) == 0:
 		cmd.FileNameProvided = false
 		cmd.Files = append(cmd.Files, FileInput{
@@ -100,7 +100,6 @@ func loadCommand() (Command, func(), error) {
 				f.Close()
 			}
 		}
-
 	default:
 		flag.Usage()
 		return cmd, cleanup, fmt.Errorf("wrong amount of args")
@@ -108,8 +107,10 @@ func loadCommand() (Command, func(), error) {
 	return cmd, cleanup, nil
 }
 
+// Run processes each input, updates count and prints result
 func (cmd *Command) Run() error {
-	for _, input := range cmd.Files {
+	for i := range cmd.Files {
+		input := cmd.Files[i]
 		reader := bufio.NewReader(input.Input)
 
 		for {
@@ -149,6 +150,7 @@ func (cmd *Command) Run() error {
 	return nil
 }
 
+// printResult prints the count for each result and total
 func printResult(counter WordCounter, cmd Command, fileName string) {
 	if cmd.LinesFlag {
 		fmt.Fprintf(cmd.Output, "%8d", counter.Lines)
@@ -168,6 +170,7 @@ func printResult(counter WordCounter, cmd Command, fileName string) {
 	fmt.Fprintln(cmd.Output)
 }
 
+// addCountToTotal accumulates count for the total line when multiple files are provided
 func (cmd *Command) addCountToTotal(input WordCounter) {
 	if cmd.LinesFlag {
 		cmd.TotalCounter.Lines += input.Lines
