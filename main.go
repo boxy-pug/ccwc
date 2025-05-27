@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 boxy-pug
-*/
 package main
 
 import (
@@ -9,144 +6,182 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"unicode"
+	"strings"
+	"unicode/utf8"
 )
 
-type wcCommand struct {
-	wcObjects        []wcObj
-	bytes            bool
-	lines            bool
-	words            bool
-	chars            bool
-	multipleFiles    bool
-	fileNameProvided bool
-	linesTotal       int
-	wordsTotal       int
-	charsTotal       int
-	bytesTotal       int
+// Command holds config and state for the wc command
+type Command struct {
+	Output           io.Writer
+	Files            []FileInput
+	TotalCounter     WordCounter
+	BytesFlag        bool
+	LinesFlag        bool
+	WordsFlag        bool
+	CharsFlag        bool
+	FileNameProvided bool
 }
 
-type wcObj struct {
-	file  *os.File
-	bytes int
-	lines int
-	words int
-	chars int
+// FileInput represents single file or input stream
+type FileInput struct {
+	FileName string
+	Counter  WordCounter
+	Input    io.Reader
+}
+
+// WordCounter tracks the count
+type WordCounter struct {
+	Lines int
+	Words int
+	Chars int
+	Bytes int
 }
 
 func main() {
-	wc := wcCommand{}
-
-	flag.BoolVar(&wc.bytes, "c", false, "count bytes")
-	flag.BoolVar(&wc.lines, "l", false, "count lines")
-	flag.BoolVar(&wc.words, "w", false, "count words")
-	flag.BoolVar(&wc.chars, "m", false, "count chars")
-
-	flag.Parse()
-
-	wc.openFile()
-	wc.getWordCount()
-
-	if !wc.bytes && !wc.chars && !wc.lines && !wc.words {
-		wc.chars, wc.lines, wc.words = true, true, true
+	cmd, cleanup, err := loadCommand()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error loading command:", err)
+		os.Exit(1)
 	}
+	defer cleanup()
 
-	wc.printToConsole()
+	err = cmd.Run()
+	if err != nil {
+		fmt.Fprintln(cmd.Output, "error running wc command:", err)
+		os.Exit(1)
+	}
 }
 
-func (wc *wcCommand) getWordCount() {
-	for i := range wc.wcObjects {
-		wcObj := &wc.wcObjects[i]
-		reader := bufio.NewReader(wcObj.file)
-		inWord := false
+// loadCommand parses cmdline flags and input files, returns configured command
+func loadCommand() (Command, func(), error) {
+	cmd := Command{
+		Output: os.Stdout,
+	}
+
+	flag.BoolVar(&cmd.BytesFlag, "c", false, "count bytes")
+	flag.BoolVar(&cmd.LinesFlag, "l", false, "count lines")
+	flag.BoolVar(&cmd.WordsFlag, "w", false, "count words")
+	flag.BoolVar(&cmd.CharsFlag, "m", false, "count chars")
+
+	flag.Parse()
+	args := flag.Args()
+
+	// If no flags provided, enable standard wc options: lines, words and bytes
+	if !cmd.BytesFlag && !cmd.LinesFlag && !cmd.WordsFlag && !cmd.CharsFlag {
+		cmd.LinesFlag, cmd.WordsFlag, cmd.BytesFlag = true, true, true
+	}
+
+	var cleanup func() = func() {}
+
+	switch {
+	// no files provided: use stdin
+	case len(args) == 0:
+		cmd.FileNameProvided = false
+		cmd.Files = append(cmd.Files, FileInput{
+			Input: os.Stdin,
+		})
+	case len(args) > 0:
+		var files []*os.File
+		for _, a := range args {
+			file, err := os.Open(a)
+			if err != nil {
+				return cmd, cleanup, fmt.Errorf("couldn't open file %v, error: %v", a, err)
+			}
+			files = append(files, file)
+			cmd.Files = append(cmd.Files, FileInput{
+				FileName: file.Name(),
+				Input:    file,
+			})
+		}
+		cmd.FileNameProvided = true
+
+		cleanup = func() {
+			for _, f := range files {
+				f.Close()
+			}
+		}
+	default:
+		flag.Usage()
+		return cmd, cleanup, fmt.Errorf("wrong amount of args")
+	}
+	return cmd, cleanup, nil
+}
+
+// Run processes each input, updates count and prints result
+func (cmd *Command) Run() error {
+	for i := range cmd.Files {
+		input := cmd.Files[i]
+		reader := bufio.NewReader(input.Input)
 
 		for {
-			r, b, err := reader.ReadRune()
+			line, err := reader.ReadString('\n')
+			if len(line) > 0 {
+
+				if cmd.LinesFlag {
+					input.Counter.Lines++
+				}
+				if cmd.WordsFlag {
+					input.Counter.Words += len(strings.Fields(line))
+				}
+				if cmd.BytesFlag {
+					input.Counter.Bytes += len(line)
+				}
+				if cmd.CharsFlag {
+					input.Counter.Chars += utf8.RuneCountInString(line)
+				}
+
+			}
 			if err == io.EOF {
 				break
 			}
-
-			wcObj.chars++
-			wcObj.bytes += b
-
-			if r == '\n' {
-				wcObj.lines++
-			}
-
-			if unicode.IsSpace(r) {
-				inWord = false
-			} else if !inWord {
-				wcObj.words++
-				inWord = true
-			}
-		}
-	}
-}
-
-func (wc *wcCommand) printToConsole() {
-	for _, wcobj := range wc.wcObjects {
-		if wc.lines {
-			fmt.Printf("%8d", wcobj.lines)
-			wc.linesTotal += wcobj.lines
-		}
-		if wc.words {
-			fmt.Printf("%8d", wcobj.words)
-			wc.wordsTotal += wcobj.lines
-		}
-		if wc.bytes {
-			fmt.Printf("%8d", wcobj.bytes)
-			wc.bytesTotal += wcobj.bytes
-		}
-		if wc.chars {
-			fmt.Printf("%8d", wcobj.chars)
-			wc.charsTotal += wcobj.chars
-		}
-		if wc.fileNameProvided {
-			fmt.Printf(" %s\n", wcobj.file.Name())
-		}
-	}
-	if wc.multipleFiles {
-		wc.printTotalLine()
-	}
-}
-
-func (wc *wcCommand) printTotalLine() {
-	if wc.lines {
-		fmt.Printf("%8d", wc.linesTotal)
-	}
-	if wc.words {
-		fmt.Printf("%8d", wc.wordsTotal)
-	}
-	if wc.bytes {
-		fmt.Printf("%8d", wc.bytesTotal)
-	}
-	if wc.chars {
-		fmt.Printf("%8d", wc.charsTotal)
-	}
-	fmt.Println(" total")
-
-}
-
-func (wc *wcCommand) openFile() {
-	filePaths := flag.Args()
-
-	switch len(filePaths) {
-	case 0:
-		wc.wcObjects = append(wc.wcObjects, wcObj{file: os.Stdin})
-		wc.fileNameProvided = false
-	default:
-		for _, filePath := range filePaths {
-			openFile, err := os.Open(filePath)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
-			wc.wcObjects = append(wc.wcObjects, wcObj{file: openFile})
-			wc.fileNameProvided = true
+		}
+		printResult(input.Counter, *cmd, input.FileName)
+
+		if len(cmd.Files) > 1 {
+			cmd.addCountToTotal(input.Counter)
 		}
 	}
+	if len(cmd.Files) > 1 {
+		printResult(cmd.TotalCounter, *cmd, "total")
+	}
+	return nil
+}
 
-	if len(wc.wcObjects) > 1 {
-		wc.multipleFiles = true
+// printResult prints the count for each result and total
+func printResult(counter WordCounter, cmd Command, fileName string) {
+	if cmd.LinesFlag {
+		fmt.Fprintf(cmd.Output, "%8d", counter.Lines)
+	}
+	if cmd.WordsFlag {
+		fmt.Fprintf(cmd.Output, "%8d", counter.Words)
+	}
+	if cmd.BytesFlag {
+		fmt.Fprintf(cmd.Output, "%8d", counter.Bytes)
+	}
+	if cmd.CharsFlag {
+		fmt.Fprintf(cmd.Output, "%8d", counter.Chars)
+	}
+	if cmd.FileNameProvided {
+		fmt.Fprintf(cmd.Output, " %s", fileName)
+	}
+	fmt.Fprintln(cmd.Output)
+}
+
+// addCountToTotal accumulates count for the total line when multiple files are provided
+func (cmd *Command) addCountToTotal(input WordCounter) {
+	if cmd.LinesFlag {
+		cmd.TotalCounter.Lines += input.Lines
+	}
+	if cmd.WordsFlag {
+		cmd.TotalCounter.Words += input.Words
+	}
+	if cmd.BytesFlag {
+		cmd.TotalCounter.Bytes += input.Bytes
+	}
+	if cmd.CharsFlag {
+		cmd.TotalCounter.Chars += input.Chars
 	}
 }
