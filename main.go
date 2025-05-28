@@ -63,6 +63,14 @@ func loadCommand() (Command, func(), error) {
 	flag.BoolVar(&cmd.WordsFlag, "w", false, "count words")
 	flag.BoolVar(&cmd.CharsFlag, "m", false, "count chars")
 
+	// Customize the usage message
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options] [file...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "A simple word count tool similar to Unix wc command.\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 	args := flag.Args()
 
@@ -100,9 +108,6 @@ func loadCommand() (Command, func(), error) {
 				f.Close()
 			}
 		}
-	default:
-		flag.Usage()
-		return cmd, cleanup, fmt.Errorf("wrong amount of args")
 	}
 	return cmd, cleanup, nil
 }

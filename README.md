@@ -63,6 +63,24 @@ $ ccwc -l -w -c test.txt
 
 ---
 
+## 🧠 What I learned
+
+-  **`io.Reader`** is great for reading from many different sources, including `os.Stdin` and `os.File`.
+
+-  When opening files in a function, return a cleanup function to close the files, and use `defer` in `main` to execute it.
+
+-  **`bufio.Scanner` vs. `bufio.Reader`:** `Scanner` is the simpler version that doesn't retain newlines, which might cause confusion with Windows-style carriage returns `/r/n` and Mac-like newlines `/n`. `Reader` is more advanced, allowing you to .
+
+-  Ranging over values in Go creates copies; to modify originals, access them by index.
+
+-  Runes represent chars in Go; one emoji or special char is one rune but several bytes: `len([]rune("😊")) == 1` but `len("😊") == 4`. (Unicode, utf8 encoding)
+
+-  To provide a custom `--help` or usage message with the `flag` package, redefine `flag.Usage` with a function to print what you want.
+
+-  `os.Stderr` is used for error messages and help text (visible even if standard output is redirected).
+
+---
+
 ## 🧑‍💻 Installation
 
 ```sh
