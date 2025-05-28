@@ -69,8 +69,6 @@ $ ccwc -l -w -c test.txt
 
 -  When opening files in a function, return a cleanup function to close the files, and use `defer` in `main` to execute it.
 
--  **`bufio.Scanner` vs. `bufio.Reader`:** `Scanner` is the simpler version that doesn't retain newlines, which might cause confusion with Windows-style carriage returns `/r/n` and Mac-like newlines `/n`. `Reader` is more advanced, allowing you to .
-
 -  Ranging over values in Go creates copies; to modify originals, access them by index.
 
 -  Runes represent chars in Go; one emoji or special char is one rune but several bytes: `len([]rune("😊")) == 1` but `len("😊") == 4`. (Unicode, utf8 encoding)
